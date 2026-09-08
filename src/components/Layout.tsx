@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { searchTools } from '../data/tools';
 import {
   Home, Wrench, Heart, Clock, User, Info, Search,
   Moon, Sun, Menu, X, Sparkles, GraduationCap, BarChart3,
-  MessageSquare, ChevronRight, Zap, Settings
+  MessageSquare, ChevronRight, Zap, Settings, LogOut, Check
 } from 'lucide-react';
 
 const navItems = [
@@ -23,10 +24,31 @@ const navItems = [
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { theme, toggleTheme, searchOpen, setSearchOpen } = useApp();
+  const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const isDark = theme === 'dark';
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setUserMenuOpen(false);
+    if (userMenuOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [userMenuOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -92,13 +114,81 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             >
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <Link
-              to="/profile"
-              className={`p-2 rounded-lg ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'} transition-colors`}
-              aria-label="Profile"
-            >
-              <User size={18} />
-            </Link>
+            {/* User Menu */}
+            {user && (
+              <div className="relative">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setUserMenuOpen(!userMenuOpen); }}
+                  className={`flex items-center gap-2 p-1.5 pr-3 rounded-xl ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'} transition-colors`}
+                >
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                    <span className="text-xs font-bold text-white">{getInitials(user.name)}</span>
+                  </div>
+                  <span className={`hidden sm:block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    {user.name.split(' ')[0]}
+                  </span>
+                </button>
+                
+                {userMenuOpen && (
+                  <div className={`absolute right-0 top-full mt-2 w-64 rounded-xl ${isDark ? 'bg-[#1a1a2e] border-white/10' : 'bg-white border-gray-200'} border shadow-2xl overflow-hidden z-50`}>
+                    {/* User Info */}
+                    <div className={`p-4 ${isDark ? 'border-white/10' : 'border-gray-100'} border-b`}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                          <span className="text-sm font-bold text-white">{getInitials(user.name)}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">{user.name}</p>
+                          <p className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{user.email}</p>
+                        </div>
+                        {user.emailVerified && (
+                          <Check size={14} className="text-green-400 flex-shrink-0" />
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Menu Items */}
+                    <div className="p-2">
+                      <Link
+                        to="/profile"
+                        onClick={() => setUserMenuOpen(false)}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isDark ? 'hover:bg-white/5 text-gray-300' : 'hover:bg-gray-50 text-gray-700'} transition-colors`}
+                      >
+                        <User size={16} />
+                        <span className="text-sm">My Profile</span>
+                      </Link>
+                      <Link
+                        to="/settings"
+                        onClick={() => setUserMenuOpen(false)}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isDark ? 'hover:bg-white/5 text-gray-300' : 'hover:bg-gray-50 text-gray-700'} transition-colors`}
+                      >
+                        <Settings size={16} />
+                        <span className="text-sm">Settings</span>
+                      </Link>
+                      <Link
+                        to="/favorites"
+                        onClick={() => setUserMenuOpen(false)}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isDark ? 'hover:bg-white/5 text-gray-300' : 'hover:bg-gray-50 text-gray-700'} transition-colors`}
+                      >
+                        <Heart size={16} />
+                        <span className="text-sm">Favorites</span>
+                      </Link>
+                    </div>
+                    
+                    {/* Logout */}
+                    <div className={`p-2 ${isDark ? 'border-white/10' : 'border-gray-100'} border-t`}>
+                      <button
+                        onClick={handleLogout}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg w-full ${isDark ? 'hover:bg-red-500/10 text-red-400' : 'hover:bg-red-50 text-red-500'} transition-colors`}
+                      >
+                        <LogOut size={16} />
+                        <span className="text-sm">Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -186,7 +276,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             { path: '/tools', icon: Wrench, label: 'Tools' },
             { path: '/ask-ai', icon: MessageSquare, label: 'Ask AI' },
             { path: '/favorites', icon: Heart, label: 'Favorites' },
-            { path: '/profile', icon: User, label: 'Profile' },
+            { path: '/profile', icon: User, label: 'Profile', isAvatar: true },
           ].map(item => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -198,7 +288,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   isActive ? 'text-indigo-400' : isDark ? 'text-gray-500' : 'text-gray-400'
                 }`}
               >
-                <Icon size={18} />
+                {(item as any).isAvatar && user ? (
+                  <div className="w-5 h-5 rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                    <span className="text-[8px] font-bold text-white">{getInitials(user.name)}</span>
+                  </div>
+                ) : (
+                  <Icon size={18} />
+                )}
                 <span className="text-[10px] font-medium">{item.label}</span>
               </Link>
             );
