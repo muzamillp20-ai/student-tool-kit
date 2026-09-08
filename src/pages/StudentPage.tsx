@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { getToolById } from '../data/tools';
-import { GraduationCap, BookOpen, Timer, Target, Calendar, CheckCircle } from 'lucide-react';
+import { GraduationCap, BookOpen, Target, Calendar, CheckCircle } from 'lucide-react';
 
 export default function StudentPage() {
   const { theme, favorites, recentlyUsed } = useApp();

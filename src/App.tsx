@@ -11,6 +11,7 @@ import AboutPage from './pages/AboutPage';
 import ProfilePage from './pages/ProfilePage';
 import StudentPage from './pages/StudentPage';
 import ProductivityPage from './pages/ProductivityPage';
+import SettingsPage from './pages/SettingsPage';
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/student" element={<StudentPage />} />
             <Route path="/productivity" element={<ProductivityPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </Layout>
       </HashRouter>

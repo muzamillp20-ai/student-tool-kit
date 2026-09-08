@@ -21,11 +21,13 @@ interface AppContextType extends AppState {
   toggleTheme: () => void;
   addFavorite: (toolId: string) => void;
   removeFavorite: (toolId: string) => void;
+  toggleFavorite: (toolId: string) => void;
   isFavorite: (toolId: string) => boolean;
   addToHistory: (item: Omit<HistoryItem, 'id' | 'timestamp'>) => void;
   clearHistory: () => void;
   deleteHistoryItem: (id: string) => void;
   addToRecentlyUsed: (toolId: string) => void;
+  addToRecent: (toolId: string) => void;
   setSearchOpen: (open: boolean) => void;
 }
 
@@ -101,12 +103,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const toggleFavorite = useCallback((toolId: string) => {
+    setFavorites(prev => prev.includes(toolId) ? prev.filter(id => id !== toolId) : [...prev, toolId]);
+  }, []);
+
+  const addToRecent = addToRecentlyUsed;
+
   return (
     <AppContext.Provider value={{
       theme, favorites, history, recentlyUsed, searchOpen,
-      toggleTheme, addFavorite, removeFavorite, isFavorite,
+      toggleTheme, addFavorite, removeFavorite, toggleFavorite, isFavorite,
       addToHistory, clearHistory, deleteHistoryItem,
-      addToRecentlyUsed, setSearchOpen,
+      addToRecentlyUsed, addToRecent, setSearchOpen,
     }}>
       {children}
     </AppContext.Provider>

@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { tools, categories, getToolById, getMVPTools, searchTools } from '../data/tools';
 import { Search, ArrowRight, Sparkles, Zap, Shield, Layers, Dice5, Star, Clock, TrendingUp } from 'lucide-react';
 
 export default function HomePage() {
-  const { theme, favorites, recentlyUsed, addToRecentlyUsed } = useApp();
+  const { theme, favorites, recentlyUsed } = useApp();
   const isDark = theme === 'dark';
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -298,7 +298,7 @@ export default function HomePage() {
 }
 
 // Tool Card Component
-function ToolCard({ tool, isDark, isFavorite, onToggleFavorite }: { tool: any; isDark: boolean; isFavorite: boolean; onToggleFavorite: () => void }) {
+function ToolCard({ tool, isDark, isFavorite }: { tool: any; isDark: boolean; isFavorite: boolean; onToggleFavorite?: () => void }) {
   const { addFavorite, removeFavorite, addToRecentlyUsed } = useApp();
   
   const handleFavorite = (e: React.MouseEvent) => {

@@ -5,7 +5,7 @@ import { searchTools } from '../data/tools';
 import {
   Home, Wrench, Heart, Clock, User, Info, Search,
   Moon, Sun, Menu, X, Sparkles, GraduationCap, BarChart3,
-  MessageSquare, ChevronRight, Zap
+  MessageSquare, ChevronRight, Zap, Settings
 } from 'lucide-react';
 
 const navItems = [
@@ -16,6 +16,7 @@ const navItems = [
   { path: '/productivity', label: 'Productivity', icon: BarChart3 },
   { path: '/favorites', label: 'Favorites', icon: Heart },
   { path: '/history', label: 'History', icon: Clock },
+  { path: '/settings', label: 'Settings', icon: Settings },
   { path: '/profile', label: 'Profile', icon: User },
   { path: '/about', label: 'About', icon: Info },
 ];
