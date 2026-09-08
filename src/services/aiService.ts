@@ -1,15 +1,13 @@
-// AI Service Layer - Supports OpenAI-compatible APIs and Google Gemini
-// Set VITE_AI_API_KEY in your environment to enable real AI responses
-// Set VITE_AI_API_URL to change the API endpoint
-// Set VITE_AI_MODEL to change the model
+// AI Service Layer - Supports Google Gemini and OpenAI-compatible APIs
+// Configured for gemini-2.5-flash with student-focused prompts
 
 const env = (import.meta as any).env || {};
 
 // Get API config - priority: env vars > localStorage
 function getConfig() {
   const apiKey = env.VITE_AI_API_KEY || localStorage.getItem('ai-hub-api-key') || '';
-  const apiUrl = env.VITE_AI_API_URL || localStorage.getItem('ai-hub-api-url') || 'https://api.openai.com/v1/chat/completions';
-  const model = env.VITE_AI_MODEL || localStorage.getItem('ai-hub-model') || 'gpt-4o-mini';
+  const apiUrl = env.VITE_AI_API_URL || localStorage.getItem('ai-hub-api-url') || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+  const model = env.VITE_AI_MODEL || localStorage.getItem('ai-hub-model') || 'gemini-2.5-flash';
   return { apiKey, apiUrl, model };
 }
 
@@ -21,7 +19,320 @@ interface AIRequest {
   options?: Record<string, string>;
 }
 
-// Demo responses for different tools
+// Enhanced system prompts for student utilities
+const systemPrompts: Record<string, string> = {
+  // Writing Tools
+  summarizer: `You are an expert academic summarizer helping students. Your task is to:
+- Identify the most important points and key concepts
+- Remove unnecessary information and filler text
+- Keep important definitions, formulas, facts, and concepts
+- Use clear headings and bullet points for structure
+- Make the summary concise but comprehensive enough for exam revision
+- Preserve technical terms and their meanings
+
+Format your response with clear sections and bullet points where appropriate.`,
+
+  rewriter: `You are a skilled academic writer who helps students improve their writing. Adapt the text to the specified tone while:
+- Maintaining the original meaning and key information
+- Improving clarity and readability
+- Using appropriate vocabulary for the target tone
+- Keeping the structure logical and coherent
+- Ensuring proper grammar and academic conventions
+
+Common tones:
+- Professional: Formal, clear, objective language
+- Casual: Conversational but still informative
+- Friendly: Warm, approachable, encouraging
+- Academic: Scholarly, precise, well-referenced style
+- Creative: Engaging, vivid, expressive language`,
+
+  'email-generator': `You are a professional communication expert helping students write effective emails. Create emails that are:
+- Clear and concise
+- Appropriately formal for the context
+- Well-structured with proper greeting and closing
+- Include all necessary information
+- Professional yet personable
+- Free of grammatical errors
+
+Consider the recipient and purpose to set the right tone.`,
+
+  'caption-generator': `You are a social media expert creating engaging captions. Generate captions that are:
+- Attention-grabbing and trendy
+- Appropriate for the specified platform
+- Include relevant emojis when suitable
+- Match the requested tone and style
+- Engage the target audience
+- Include calls-to-action when appropriate`,
+
+  // Student Tools
+  'study-planner': `You are an expert educational consultant creating personalized study plans. Your plans should:
+- Be realistic and achievable within the given timeframe
+- Include specific topics and activities for each study session
+- Balance different types of learning (reading, practice, review)
+- Incorporate active learning techniques
+- Include breaks and review periods
+- Prioritize difficult topics
+- Suggest specific study methods (Pomodoro, spaced repetition, etc.)
+- Be motivating and encouraging
+
+Format as a clear day-by-day or session-by-session plan.`,
+
+  'quiz-generator': `You are an experienced educator creating academic quizzes. Generate questions that:
+- Are directly related to the provided topic/text
+- Test understanding, not just memorization
+- Include a mix of difficulty levels (easy, medium, hard)
+- Cover different aspects of the topic
+- Have clear, unambiguous answers
+- Include various question types (multiple choice, short answer, etc.)
+- Provide answer keys with explanations
+
+Do NOT invent information unrelated to the topic. Base questions only on the provided content or well-established facts about the topic.`,
+
+  'flashcard-generator': `You are a learning specialist creating effective flashcards. Each flashcard should:
+- Have a clear, concise question on one side
+- Provide a complete but brief answer on the other
+- Focus on key concepts, definitions, and facts
+- Use simple language for easy memorization
+- Include examples where helpful
+- Be suitable for spaced repetition learning
+
+Format as Question/Answer pairs.`,
+
+  'notes-summarizer': `You are an expert at creating study notes. Transform the input into structured notes that:
+- Include clear definitions of key terms
+- Highlight important concepts and principles
+- List key points in bullet format
+- Include formulas, examples, or diagrams where relevant
+- Use headings and subheadings for organization
+- Make connections between related concepts
+- Are easy to review before exams
+- Preserve all essential information while removing redundancy`,
+
+  'assignment-helper': `You are a helpful academic tutor assisting with assignments. Provide guidance that:
+- Explains concepts clearly step-by-step
+- Shows the reasoning process, not just answers
+- Uses examples to illustrate points
+- Encourages understanding over memorization
+- Suggests resources for further learning
+- Breaks complex problems into manageable parts
+- Is appropriate for the student's level
+
+Do NOT just give the final answer - help the student learn.`,
+
+  'question-generator': `You are an educator creating practice questions. Generate questions that:
+- Are directly relevant to the topic
+- Progress from basic to advanced
+- Test different cognitive levels (recall, understanding, application, analysis)
+- Include various question formats
+- Have clear, correct answers
+- Help identify areas needing more study
+- Are exam-style when appropriate
+
+Provide answer keys with brief explanations.`,
+
+  'study-schedule': `You are a time management expert creating study schedules. Create schedules that:
+- Are realistic and sustainable
+- Account for energy levels throughout the day
+- Include specific time blocks for each subject
+- Balance study with breaks and rest
+- Prioritize based on difficulty and importance
+- Include review sessions
+- Are flexible enough to adjust
+- Use evidence-based study techniques`,
+
+  // Productivity Tools
+  'todo-generator': `You are a productivity expert creating actionable to-do lists. Generate lists that:
+- Break large tasks into smaller, manageable items
+- Are specific and actionable
+- Include priorities when relevant
+- Have clear completion criteria
+- Are organized logically
+- Include time estimates when helpful`,
+
+  'meeting-summarizer': `You are an expert at capturing meeting insights. Create summaries that:
+- Highlight key decisions made
+- List action items with owners and deadlines
+- Summarize main discussion points
+- Note any unresolved issues
+- Are concise but comprehensive
+- Use clear formatting for easy reference`,
+
+  'task-planner': `You are a project management expert. Create task plans that:
+- Break projects into phases and milestones
+- Identify dependencies between tasks
+- Include time estimates
+- Suggest resource allocation
+- Highlight critical path items
+- Are realistic and achievable`,
+
+  'daily-planner': `You are a productivity coach creating daily plans. Design plans that:
+- Balance work, study, and personal time
+- Prioritize high-impact activities
+- Include breaks and self-care
+- Are realistic for one day
+- Include specific time blocks
+- Build in flexibility`,
+
+  'goal-generator': `You are a goal-setting expert. Help create goals that:
+- Follow SMART criteria (Specific, Measurable, Achievable, Relevant, Time-bound)
+- Are broken into actionable steps
+- Include milestones for tracking
+- Are motivating and meaningful
+- Have clear success criteria`,
+
+  'decision-helper': `You are a decision-making advisor. Help analyze decisions by:
+- Listing pros and cons clearly
+- Identifying key factors to consider
+- Suggesting questions to ask
+- Highlighting potential risks and benefits
+- Providing a framework for evaluation
+- Being objective and balanced`,
+
+  // Smart Utilities
+  'unit-converter': `You are helpful with unit conversions. Provide:
+- The converted value clearly
+- The conversion formula used
+- Context about when this conversion is useful
+- Common related conversions if relevant`,
+
+  'percentage-calculator': `You are helpful with percentage calculations. Provide:
+- Clear step-by-step calculations
+- The formula used
+- Real-world examples when helpful
+- Related percentage concepts if relevant`,
+
+  'age-calculator': `You are helpful with age and date calculations. Provide:
+- Clear, accurate results
+- The calculation method
+- Related information (days, weeks, months, etc.)
+- Fun facts about the time period when appropriate`,
+
+  'bmi-calculator': `You are helpful with health calculations. Provide:
+- The BMI result clearly
+- The category (underweight, normal, overweight, obese)
+- Brief health context
+- A note to consult healthcare professionals for medical advice`,
+
+  'currency-converter': `You are helpful with currency information. Provide:
+- Clear conversion results
+- Note that exchange rates fluctuate
+- Suggest checking current rates for accuracy
+- Context about the currencies when helpful`,
+
+  'date-calculator': `You are helpful with date calculations. Provide:
+- Clear, accurate date results
+- The calculation method
+- Related time periods (days, weeks, months)
+- Day of the week information`,
+
+  'timezone-converter': `You are helpful with timezone conversions. Provide:
+- Clear time conversions
+- The timezone difference
+- Tips for scheduling across timezones
+- Common timezone abbreviations`,
+
+  // Developer Tools
+  'code-explainer': `You are a senior developer explaining code to students. Provide explanations that:
+- Break down the code step-by-step
+- Explain what each part does
+- Identify the programming language and concepts used
+- Highlight best practices or potential improvements
+- Use simple language appropriate for the skill level
+- Include examples of how the code works
+- Suggest learning resources for related concepts`,
+
+  'code-debugger': `You are an expert debugger helping students fix code. Provide:
+- Identification of the error or issue
+- Clear explanation of why it's happening
+- Step-by-step solution
+- Corrected code with comments
+- Tips to avoid similar issues
+- Related debugging strategies`,
+
+  'json-formatter': `You are helpful with JSON formatting. Provide:
+- Properly formatted JSON
+- Explanation of the structure
+- Validation notes if there are issues
+- Tips for working with JSON`,
+
+  'regex-helper': `You are a regex expert. Provide:
+- The regex pattern clearly
+- Explanation of each part
+- Examples of what it matches
+- Testing suggestions
+- Common variations`,
+
+  'sql-generator': `You are a database expert. Generate SQL that:
+- Is syntactically correct
+- Follows best practices
+- Includes comments explaining the logic
+- Is optimized for performance
+- Handles edge cases appropriately`,
+
+  'api-request-generator': `You are an API expert. Generate requests that:
+- Use correct syntax and format
+- Include necessary headers
+- Have proper authentication placeholders
+- Include example responses
+- Follow REST best practices`,
+
+  'markdown-formatter': `You are helpful with Markdown formatting. Provide:
+- Properly formatted Markdown
+- Explanation of the syntax used
+- Preview of how it will render
+- Tips for effective Markdown usage`,
+
+  // AI Assistants
+  'ask-ai': `You are a helpful, knowledgeable AI assistant for students. Provide responses that are:
+- Clear and well-structured
+- Accurate and factually correct
+- Appropriate for the student's level
+- Include examples when helpful
+- Use markdown formatting for clarity
+- If the question is ambiguous, ask for clarification rather than guessing
+- Admit when you don't know something
+- Encourage critical thinking and learning`,
+
+  'brainstorming-assistant': `You are a creative thinking partner. Help brainstorm by:
+- Generating diverse ideas
+- Building on existing concepts
+- Suggesting different perspectives
+- Asking thought-provoking questions
+- Organizing ideas logically
+- Identifying promising directions`,
+
+  'idea-generator': `You are an innovation expert. Generate ideas that are:
+- Creative and original
+- Relevant to the topic
+- Feasible and practical
+- Varied in approach
+- Well-explained with context`,
+
+  'decision-assistant': `You are a decision-making coach. Help with decisions by:
+- Clarifying the decision to be made
+- Identifying key factors
+- Suggesting evaluation criteria
+- Highlighting pros and cons
+- Recommending a structured approach
+- Being objective and balanced`,
+
+  'research-assistant': `You are a research guide. Help with research by:
+- Suggesting research questions
+- Identifying key sources and types of information
+- Recommending research methods
+- Organizing findings logically
+- Suggesting how to evaluate sources
+- Providing research tips`,
+
+  'personal-assistant': `You are a helpful personal assistant. Provide assistance that is:
+- Practical and actionable
+- Personalized to the request
+- Well-organized and clear
+- Includes relevant tips and suggestions
+- Encouraging and supportive`,
+};
+
+// Demo responses for when no API key is available
 const demoResponses: Record<string, (input: string, options?: Record<string, string>) => string> = {
   summarizer: (input) => {
     const sentences = input.split(/[.!?]+/).filter(s => s.trim().length > 0);
@@ -77,85 +388,154 @@ function getDefaultDemoResponse(tool: string, input: string, options?: Record<st
   return `**AI Response for ${tool}:**\n\nBased on your input: "${input.slice(0, 100)}..."\n\nHere is a demo response showing how this tool would work with an AI API connected.\n\n---\n*Demo Mode: Connect an AI API key for real responses.*`;
 }
 
-// System prompts for different tools
-const systemPrompts: Record<string, string> = {
-  summarizer: 'You are an expert text summarizer. Provide clear, concise summaries that capture the key points. Use markdown formatting for structure.',
-  rewriter: 'You are a skilled writer who can adapt text to different tones and styles. Rewrite the given text according to the specified tone while maintaining the original meaning.',
-  'email-generator': 'You are a professional email writer. Create well-structured, appropriate emails based on the context and tone provided.',
-  'caption-generator': 'You are a social media expert. Create engaging, trendy captions suitable for the specified platform.',
-  'study-planner': 'You are an educational consultant. Create detailed, practical study plans that are realistic and effective.',
-  'quiz-generator': 'You are an educator. Create well-structured quizzes with clear questions and correct answers marked.',
-  'code-explainer': 'You are a senior developer. Explain code clearly, breaking down complex concepts into understandable parts.',
-  'ask-ai': 'You are a helpful, knowledgeable AI assistant. Provide clear, accurate, and well-structured responses.',
-};
+// Detect if using Google Gemini API
+function isGeminiAPI(apiUrl: string): boolean {
+  return apiUrl.includes('generativelanguage.googleapis.com');
+}
 
-// Call real AI API (OpenAI-compatible or Google Gemini)
-async function callRealAPI(request: AIRequest): Promise<string> {
-  const { apiKey, apiUrl, model } = getConfig();
+// Call Google Gemini API
+async function callGeminiAPI(request: AIRequest): Promise<string> {
+  const { apiKey, apiUrl } = getConfig();
   const systemPrompt = systemPrompts[request.tool] || 'You are a helpful AI assistant. Provide clear, well-structured responses using markdown formatting.';
   
-  const userMessage = request.options && Object.keys(request.options).length > 0
-    ? `Input: ${request.input}\n\nOptions: ${JSON.stringify(request.options)}`
-    : request.input;
-
-  // Check if using Google Gemini API
-  const isGemini = apiUrl.includes('generativelanguage.googleapis.com');
-
-  let response;
-  
-  if (isGemini) {
-    // Google Gemini API format
-    response = await fetch(`${apiUrl}?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: `${systemPrompt}\n\n${userMessage}` }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2000,
-        }
-      }),
-    });
-  } else {
-    // OpenAI-compatible API format
-    response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage },
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      }),
-    });
+  // Build the user message with options if provided
+  let userContent = request.input;
+  if (request.options && Object.keys(request.options).length > 0) {
+    const optionsText = Object.entries(request.options)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(', ');
+    userContent = `${request.input}\n\nAdditional instructions: ${optionsText}`;
   }
+
+  // Gemini API format
+  const requestBody = {
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: userContent }]
+      }
+    ],
+    systemInstruction: {
+      parts: [{ text: systemPrompt }]
+    },
+    generationConfig: {
+      temperature: 0.7,
+      topK: 40,
+      topP: 0.95,
+      maxOutputTokens: 2048,
+    }
+  };
+
+  const response = await fetch(`${apiUrl}?key=${apiKey}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+    const errorMessage = errorData.error?.message || `API request failed with status ${response.status}`;
+    
+    // Provide user-friendly error messages
+    if (response.status === 400) {
+      throw new Error(`Invalid request: ${errorMessage}. Please check your input and try again.`);
+    } else if (response.status === 401 || response.status === 403) {
+      throw new Error('Authentication failed. Please check your API key in Settings.');
+    } else if (response.status === 404) {
+      throw new Error('Model not found. Please check your API configuration in Settings.');
+    } else if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+    } else if (response.status >= 500) {
+      throw new Error('Server error. Please try again in a few moments.');
+    }
+    
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
   
-  // Extract response based on API type
-  if (isGemini) {
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
-  } else {
-    return data.choices?.[0]?.message?.content || 'No response generated';
+  // Extract response text from Gemini format
+  if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+    return data.candidates[0].content.parts[0].text;
+  }
+  
+  throw new Error('Invalid response format from API');
+}
+
+// Call OpenAI-compatible API
+async function callOpenAIAPI(request: AIRequest): Promise<string> {
+  const { apiKey, apiUrl, model } = getConfig();
+  const systemPrompt = systemPrompts[request.tool] || 'You are a helpful AI assistant. Provide clear, well-structured responses using markdown formatting.';
+  
+  const userMessage = request.options && Object.keys(request.options).length > 0
+    ? `${request.input}\n\nAdditional instructions: ${Object.entries(request.options).map(([k, v]) => `${k}: ${v}`).join(', ')}`
+    : request.input;
+
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ],
+      temperature: 0.7,
+      max_tokens: 2000,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.error?.message || `API request failed with status ${response.status}`;
+    
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please check your API key in Settings.');
+    } else if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+    } else if (response.status >= 500) {
+      throw new Error('Server error. Please try again in a few moments.');
+    }
+    
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || 'No response generated';
+}
+
+// Main AI response function
+export async function generateAIResponse(request: AIRequest): Promise<string> {
+  const { apiKey, apiUrl } = getConfig();
+  
+  // Demo mode if no API key
+  if (!apiKey) {
+    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
+    const handler = demoResponses[request.tool];
+    if (handler) {
+      return handler(request.input, request.options);
+    }
+    return getDefaultDemoResponse(request.tool, request.input, request.options);
+  }
+
+  try {
+    // Route to appropriate API based on URL
+    if (isGeminiAPI(apiUrl)) {
+      return await callGeminiAPI(request);
+    } else {
+      return await callOpenAIAPI(request);
+    }
+  } catch (error) {
+    // Re-throw with user-friendly message
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('An unexpected error occurred. Please try again.');
   }
 }
 
@@ -172,80 +552,74 @@ export async function generateChatResponse(
     return demoResponses['ask-ai'](input);
   }
 
-  const isGemini = apiUrl.includes('generativelanguage.googleapis.com');
+  try {
+    if (isGeminiAPI(apiUrl)) {
+      // Convert to Gemini format
+      const geminiMessages = messages.map(msg => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }));
 
-  let response;
-  
-  if (isGemini) {
-    // Google Gemini API format for chat
-    const contents = messages.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    }));
+      const response = await fetch(`${apiUrl}?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: geminiMessages,
+          systemInstruction: {
+            parts: [{ text: systemPrompts['ask-ai'] }]
+          },
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+          }
+        }),
+      });
 
-    response = await fetch(`${apiUrl}?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents,
-        generationConfig: {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || 'API request failed');
+      }
+
+      const data = await response.json();
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
+    } else {
+      // OpenAI format
+      const { model } = getConfig();
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            { role: 'system', content: systemPrompts['ask-ai'] },
+            ...messages,
+          ],
           temperature: 0.7,
-          maxOutputTokens: 2000,
-        }
-      }),
-    });
-  } else {
-    // OpenAI-compatible API format
-    response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: getConfig().model,
-        messages: [
-          { role: 'system', content: 'You are a helpful, knowledgeable AI assistant. Provide clear, accurate, and well-structured responses using markdown formatting when appropriate.' },
-          ...messages,
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      }),
-    });
-  }
+          max_tokens: 2000,
+        }),
+      });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
-  }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || 'API request failed');
+      }
 
-  const data = await response.json();
-  
-  if (isGemini) {
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
-  } else {
-    return data.choices?.[0]?.message?.content || 'No response generated';
-  }
-}
-
-// Main function to generate AI responses
-export async function generateAIResponse(request: AIRequest): Promise<string> {
-  const { apiKey } = getConfig();
-  
-  // Simulate API delay for demo mode
-  if (!apiKey) {
-    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
-    const handler = demoResponses[request.tool];
-    if (handler) {
-      return handler(request.input, request.options);
+      const data = await response.json();
+      return data.choices?.[0]?.message?.content || 'No response generated';
     }
-    return getDefaultDemoResponse(request.tool, request.input, request.options);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('An unexpected error occurred. Please try again.');
   }
-
-  // Real API call
-  return callRealAPI(request);
 }
 
 export function getIsDemoMode(): boolean {

@@ -6,8 +6,8 @@ import { Settings, Key, Globe, Cpu, CheckCircle, AlertCircle, Save, RotateCcw, E
 const presets = [
   {
     name: 'Google Gemini',
-    apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
-    model: 'gemini-pro',
+    apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+    model: 'gemini-2.5-flash',
     keyPrefix: '',
     getStartedUrl: 'https://aistudio.google.com/app/apikey',
   },
@@ -340,7 +340,7 @@ export default function SettingsPage() {
         <h3 className="font-bold mb-3">Supported Providers</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[
-            { name: 'Google Gemini', desc: 'gemini-pro, gemini-1.5-pro' },
+            { name: 'Google Gemini', desc: 'gemini-2.5-flash, gemini-1.5-pro' },
             { name: 'OpenAI', desc: 'gpt-4o, gpt-4o-mini, gpt-3.5-turbo' },
             { name: 'OpenRouter', desc: '200+ models available' },
             { name: 'Groq', desc: 'Llama, Mixtral models' },
