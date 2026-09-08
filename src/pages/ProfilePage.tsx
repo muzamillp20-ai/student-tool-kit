@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { User, Heart, Wrench, Trash2, RotateCcw, Moon, Sun } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { User, Heart, Wrench, Trash2, RotateCcw, Moon, Sun, Settings } from 'lucide-react';
 
 export default function ProfilePage() {
   const { theme, toggleTheme, favorites, history, recentlyUsed, clearHistory } = useApp();
@@ -130,6 +131,19 @@ export default function ProfilePage() {
           💡 All data is stored locally on your device. No account needed. Your preferences, favorites, and history are private.
         </p>
       </div>
+
+      {/* Quick Link to Settings */}
+      <Link
+        to="/settings"
+        className={`flex items-center gap-3 p-4 rounded-xl transition-colors ${isDark ? 'bg-white/5 hover:bg-white/10 border border-white/10' : 'bg-white hover:bg-gray-50 border border-gray-200 shadow-sm'}`}
+      >
+        <Settings size={18} className="text-indigo-400" />
+        <div className="flex-1">
+          <p className="text-sm font-medium">AI Settings</p>
+          <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Configure your AI provider and API key</p>
+        </div>
+        <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>→</span>
+      </Link>
     </div>
   );
 }

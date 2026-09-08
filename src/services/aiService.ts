@@ -1,7 +1,7 @@
-// AI Service Layer - Supports OpenAI-compatible APIs (Qwen, OpenRouter, Groq, etc.)
+// AI Service Layer - Supports OpenAI-compatible APIs and Google Gemini
 // Set VITE_AI_API_KEY in your environment to enable real AI responses
-// Set VITE_AI_API_URL to change the API endpoint (defaults to OpenAI)
-// Set VITE_AI_MODEL to change the model (defaults to gpt-4o-mini)
+// Set VITE_AI_API_URL to change the API endpoint
+// Set VITE_AI_MODEL to change the model
 
 const env = (import.meta as any).env || {};
 
@@ -21,44 +21,7 @@ interface AIRequest {
   options?: Record<string, string>;
 }
 
-// System prompts for each tool
-const systemPrompts: Record<string, string> = {
-  summarizer: 'You are an expert text summarizer. Provide clear, concise summaries that capture the key points. Use markdown formatting.',
-  rewriter: 'You are a professional writer who rewrites text in different tones and styles. Preserve the original meaning while adapting the tone.',
-  'email-generator': 'You are an expert email writer. Generate professional, well-structured emails based on the given context.',
-  'caption-generator': 'You are a social media expert. Generate engaging, creative captions for various platforms.',
-  'study-planner': 'You are an expert academic planner. Create detailed, realistic study plans with specific time allocations.',
-  'quiz-generator': 'You are an expert educator. Generate well-structured quizzes with clear questions, multiple choice options, and correct answers marked.',
-  'code-explainer': 'You are a senior software engineer. Explain code clearly, breaking down logic, purpose, and suggesting improvements.',
-  'ask-ai': 'You are a helpful, knowledgeable AI assistant. Provide clear, accurate, and well-structured responses.',
-  'grammar-fixer': 'You are an expert grammar checker. Fix grammatical errors while preserving the original meaning and tone.',
-  'paraphraser': 'You are an expert at rephrasing text. Rewrite content in different words while keeping the same meaning.',
-  'text-expander': 'You are a writing assistant. Expand short text into more detailed, comprehensive content.',
-  'text-shortener': 'You are a writing assistant. Condense text while preserving key information.',
-  'bio-generator': 'You are a personal branding expert. Generate compelling bios for various purposes.',
-  'flashcard-generator': 'You are an expert educator. Create effective flashcards with clear questions and concise answers.',
-  'notes-summarizer': 'You are a note-taking expert. Summarize study notes into clear, organized key points.',
-  'assignment-helper': 'You are an academic assistant. Help with assignments by providing guidance, structure, and explanations.',
-  'question-generator': 'You are an expert educator. Generate thoughtful questions for study and review.',
-  'meeting-summarizer': 'You are a business professional. Summarize meeting notes into clear action items and key decisions.',
-  'decision-helper': 'You are a decision-making advisor. Help analyze options with pros, cons, and recommendations.',
-  'json-formatter': 'You are a developer tool. Format and validate JSON, explaining any errors found.',
-  'regex-helper': 'You are a regex expert. Help create, explain, and debug regular expressions.',
-  'sql-generator': 'You are a database expert. Generate SQL queries based on natural language descriptions.',
-  'idea-generator': 'You are a creative brainstorming partner. Generate diverse, innovative ideas.',
-  'brainstorming-assistant': 'You are a creative thinking partner. Help explore ideas from multiple angles.',
-  'research-assistant': 'You are a research assistant. Help organize and analyze information.',
-  'personal-assistant': 'You are a helpful personal assistant. Help with planning, organization, and daily tasks.',
-  'todo-generator': 'You are a productivity expert. Generate smart, actionable to-do lists.',
-  'task-planner': 'You are a project management expert. Help plan and organize tasks effectively.',
-  'daily-planner': 'You are a productivity coach. Help plan productive days with balanced activities.',
-  'goal-generator': 'You are a goal-setting expert. Help create SMART goals with actionable steps.',
-  'time-planner': 'You are a time management expert. Help allocate time effectively across tasks.',
-  'markdown-formatter': 'You are a documentation expert. Format and improve markdown content.',
-  'api-request-generator': 'You are an API expert. Generate API request examples with proper formatting.',
-};
-
-// Demo responses for when no API key is available
+// Demo responses for different tools
 const demoResponses: Record<string, (input: string, options?: Record<string, string>) => string> = {
   summarizer: (input) => {
     const sentences = input.split(/[.!?]+/).filter(s => s.trim().length > 0);
@@ -110,13 +73,23 @@ const demoResponses: Record<string, (input: string, options?: Record<string, str
   },
 };
 
-// Default demo response for tools without specific handlers
 function getDefaultDemoResponse(tool: string, input: string, options?: Record<string, string>): string {
-  const optionsText = options ? Object.entries(options).map(([k, v]) => `${k}: ${v}`).join(', ') : '';
-  return `**AI Response for ${tool}:**\n\nBased on your input: "${input.slice(0, 100)}..."\n\n${optionsText ? `Options: ${optionsText}\n\n` : ''}Here is a demo response showing how this tool would work with an AI API connected.\n\n---\n*Demo Mode: Connect an AI API key for real responses.*`;
+  return `**AI Response for ${tool}:**\n\nBased on your input: "${input.slice(0, 100)}..."\n\nHere is a demo response showing how this tool would work with an AI API connected.\n\n---\n*Demo Mode: Connect an AI API key for real responses.*`;
 }
 
-// Call real AI API
+// System prompts for different tools
+const systemPrompts: Record<string, string> = {
+  summarizer: 'You are an expert text summarizer. Provide clear, concise summaries that capture the key points. Use markdown formatting for structure.',
+  rewriter: 'You are a skilled writer who can adapt text to different tones and styles. Rewrite the given text according to the specified tone while maintaining the original meaning.',
+  'email-generator': 'You are a professional email writer. Create well-structured, appropriate emails based on the context and tone provided.',
+  'caption-generator': 'You are a social media expert. Create engaging, trendy captions suitable for the specified platform.',
+  'study-planner': 'You are an educational consultant. Create detailed, practical study plans that are realistic and effective.',
+  'quiz-generator': 'You are an educator. Create well-structured quizzes with clear questions and correct answers marked.',
+  'code-explainer': 'You are a senior developer. Explain code clearly, breaking down complex concepts into understandable parts.',
+  'ask-ai': 'You are a helpful, knowledgeable AI assistant. Provide clear, accurate, and well-structured responses.',
+};
+
+// Call real AI API (OpenAI-compatible or Google Gemini)
 async function callRealAPI(request: AIRequest): Promise<string> {
   const { apiKey, apiUrl, model } = getConfig();
   const systemPrompt = systemPrompts[request.tool] || 'You are a helpful AI assistant. Provide clear, well-structured responses using markdown formatting.';
@@ -125,45 +98,139 @@ async function callRealAPI(request: AIRequest): Promise<string> {
     ? `Input: ${request.input}\n\nOptions: ${JSON.stringify(request.options)}`
     : request.input;
 
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage },
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
-    }),
-  });
+  // Check if using Google Gemini API
+  const isGemini = apiUrl.includes('generativelanguage.googleapis.com');
+
+  let response;
+  
+  if (isGemini) {
+    // Google Gemini API format
+    response = await fetch(`${apiUrl}?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: `${systemPrompt}\n\n${userMessage}` }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2000,
+        }
+      }),
+    });
+  } else {
+    // OpenAI-compatible API format
+    response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      }),
+    });
+  }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    const errorMessage = errorData?.error?.message || `API request failed (${response.status})`;
-    throw new Error(errorMessage);
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
   }
 
   const data = await response.json();
   
-  // Handle OpenAI-compatible response format
-  if (data.choices && data.choices[0]?.message?.content) {
-    return data.choices[0].message.content;
+  // Extract response based on API type
+  if (isGemini) {
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
+  } else {
+    return data.choices?.[0]?.message?.content || 'No response generated';
   }
-  
-  // Handle other response formats
-  if (data.result) return data.result;
-  if (data.output) return data.output;
-  if (data.text) return data.text;
-  if (data.response) return data.response;
-  
-  throw new Error('Unexpected API response format');
 }
 
+// Chat-specific function for Ask AI page
+export async function generateChatResponse(
+  messages: { role: string; content: string }[]
+): Promise<string> {
+  const { apiKey, apiUrl } = getConfig();
+  
+  if (!apiKey) {
+    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
+    const lastUserMsg = messages.filter(m => m.role === 'user').pop();
+    const input = lastUserMsg?.content || '';
+    return demoResponses['ask-ai'](input);
+  }
+
+  const isGemini = apiUrl.includes('generativelanguage.googleapis.com');
+
+  let response;
+  
+  if (isGemini) {
+    // Google Gemini API format for chat
+    const contents = messages.map(msg => ({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: msg.content }]
+    }));
+
+    response = await fetch(`${apiUrl}?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2000,
+        }
+      }),
+    });
+  } else {
+    // OpenAI-compatible API format
+    response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: getConfig().model,
+        messages: [
+          { role: 'system', content: 'You are a helpful, knowledgeable AI assistant. Provide clear, accurate, and well-structured responses using markdown formatting when appropriate.' },
+          ...messages,
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      }),
+    });
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+  }
+
+  const data = await response.json();
+  
+  if (isGemini) {
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
+  } else {
+    return data.choices?.[0]?.message?.content || 'No response generated';
+  }
+}
+
+// Main function to generate AI responses
 export async function generateAIResponse(request: AIRequest): Promise<string> {
   const { apiKey } = getConfig();
   
@@ -179,50 +246,6 @@ export async function generateAIResponse(request: AIRequest): Promise<string> {
 
   // Real API call
   return callRealAPI(request);
-}
-
-// Chat-specific function for Ask AI page
-export async function generateChatResponse(
-  messages: { role: string; content: string }[]
-): Promise<string> {
-  const { apiKey, apiUrl, model } = getConfig();
-  if (!apiKey) {
-    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
-    const lastUserMsg = messages.filter(m => m.role === 'user').pop();
-    const input = lastUserMsg?.content || '';
-    return demoResponses['ask-ai'](input);
-  }
-
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: [
-        { role: 'system', content: 'You are a helpful, knowledgeable AI assistant. Provide clear, accurate, and well-structured responses using markdown formatting when appropriate.' },
-        ...messages,
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    const errorMessage = errorData?.error?.message || `API request failed (${response.status})`;
-    throw new Error(errorMessage);
-  }
-
-  const data = await response.json();
-  
-  if (data.choices && data.choices[0]?.message?.content) {
-    return data.choices[0].message.content;
-  }
-  
-  throw new Error('Unexpected API response format');
 }
 
 export function getIsDemoMode(): boolean {
