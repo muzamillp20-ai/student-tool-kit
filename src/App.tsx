@@ -17,6 +17,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import EmailVerificationPage from './pages/EmailVerificationPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import MediaGeneratorPage from './pages/MediaGeneratorPage';
 import { ReactNode } from 'react';
 
 // Protected route wrapper
@@ -143,6 +144,13 @@ function AppRoutes() {
         <ProtectedRoute>
           <Layout>
             <SettingsPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/media-generator" element={
+        <ProtectedRoute>
+          <Layout>
+            <MediaGeneratorPage />
           </Layout>
         </ProtectedRoute>
       } />

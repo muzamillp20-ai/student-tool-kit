@@ -45,6 +45,7 @@ export const tools: Tool[] = [
   { id: 'assignment-helper', name: 'Assignment Helper', description: 'Get help with assignments and homework', category: 'student', icon: '📚', keywords: ['assignment', 'homework', 'help', 'task', 'school'] },
   { id: 'question-generator', name: 'Question Generator', description: 'Generate practice questions from topics', category: 'student', icon: '🤔', keywords: ['questions', 'practice', 'generate', 'quiz', 'test'] },
   { id: 'study-schedule', name: 'Study Schedule Generator', description: 'Create optimal study timetables', category: 'student', icon: '🗓️', keywords: ['schedule', 'timetable', 'plan', 'organize', 'time'] },
+  { id: 'media-generator', name: 'AI Media Generator', description: 'Generate AI images and videos for educational content', category: 'student', icon: '🎨', keywords: ['image', 'video', 'media', 'generate', 'ai', 'create', 'photo', 'animation'], isMVP: true },
 
   // Productivity
   { id: 'todo-generator', name: 'To-Do Generator', description: 'Generate smart to-do lists', category: 'productivity', icon: '☑️', keywords: ['todo', 'tasks', 'list', 'organize', 'plan'] },
