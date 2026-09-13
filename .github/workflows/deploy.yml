@@ -39,6 +39,13 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Verify build output
+        run: |
+          echo "Checking dist folder contents..."
+          ls -la dist/
+          ls -la dist/assets/ || echo "No assets folder found"
+          cat dist/index.html | head -30
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
