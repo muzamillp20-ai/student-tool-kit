@@ -27,6 +27,12 @@ export default function ToolDetailPage() {
 
   useEffect(() => {
     if (tool) {
+      // Redirect media-generator to its dedicated page
+      if (tool.id === 'media-generator') {
+        navigate('/media-generator', { replace: true });
+        return;
+      }
+      
       setInput('');
       setOutput('');
       setError('');

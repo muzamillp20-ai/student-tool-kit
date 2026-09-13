@@ -15,6 +15,7 @@ export default function StudentPage() {
     { id: 'assignment-helper', icon: '📚', name: 'Assignment Helper', desc: 'Get help with assignments' },
     { id: 'question-generator', icon: '🤔', name: 'Question Generator', desc: 'Generate practice questions' },
     { id: 'study-schedule', icon: '🗓️', name: 'Study Schedule', desc: 'Create optimal timetables' },
+    { id: 'media-generator', icon: '🎨', name: 'AI Media Generator', desc: 'Generate AI images and videos', isSpecial: true },
   ];
 
   const recentStudentTools = recentlyUsed
@@ -59,7 +60,7 @@ export default function StudentPage() {
           {studentTools.map(tool => (
             <Link
               key={tool.id}
-              to={`/tool/${tool.id}`}
+              to={(tool as any).isSpecial ? `/${tool.id}` : `/tool/${tool.id}`}
               className={`group p-5 rounded-xl card-hover ${isDark ? 'bg-white/5 border border-white/5 hover:border-indigo-500/30' : 'bg-white border border-gray-100 hover:border-indigo-200 shadow-sm'}`}
             >
               <span className="text-3xl mb-3 block">{tool.icon}</span>
